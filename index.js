@@ -32,7 +32,7 @@ let bot
 if (process.env.environment == 'production') {
   // if environment is "Production"
   bot = new Telegraf(process.env.BOT_TOKEN)
-  bot.startWebhook(`/${YOUR_BOT_TOKEN}`, null, 3000) // Setting webhook URL path
+  // bot.startWebhook(`/${BOT_TOKEN}`, null, 3000) // Setting webhook URL path
 } else {
   // Else local
   bot = new Telegraf(process.env.TEST_BOT_TOKEN)
@@ -74,7 +74,7 @@ if (process.env.environment == 'production') {
   bot
     .launch({
       webhook: {
-        domain: process.env.DOMAIN, // Your domain URL (where server code will be deployed)
+        domain: process.env.APP_DOMAIN, // Your domain URL (where server code will be deployed)
         port: process.env.PORT || 8000,
       },
     })
