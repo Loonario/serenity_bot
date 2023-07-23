@@ -32,7 +32,7 @@ let bot
 if (process.env.environment == 'production') {
   // if environment is "Production"
   bot = new Telegraf(process.env.BOT_TOKEN)
-  // bot.startWebhook(`/${BOT_TOKEN}`, null, 3000) // Setting webhook URL path
+  //bot.startWebhook(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/setWebhook?url=${process.env.APP_DOMAIN}&drop_pending_updates=true`, null, 3000,) // Setting webhook URL path
 } else {
   // Else local
   bot = new Telegraf(process.env.TEST_BOT_TOKEN)
