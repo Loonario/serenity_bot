@@ -72,7 +72,12 @@ bot.command('grave_service', async ctx => {
   }
 })
 
-if (process.env.environment == 'production') {
+if (process.env.environment == 'development') {
+  // if local use Long-polling
+  bot.launch().then(() => {
+    console.info(`The bot ${bot.botInfo.username} is running locally`)
+  })
+} else {
   // Launch on webhook
   bot
     .launch({
@@ -84,11 +89,6 @@ if (process.env.environment == 'production') {
     .then(() => {
       console.info(`The bot ${bot.botInfo.username} is running on server`)
     })
-} else {
-  // if local use Long-polling
-  bot.launch().then(() => {
-    console.info(`The bot ${bot.botInfo.username} is running locally`)
-  })
 }
 process.once('SIGINT', () => app.stop('SIGINT'))
 process.once('SIGTERM', () => app.stop('SIGTERM'))
