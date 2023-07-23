@@ -29,15 +29,15 @@ gsStage.hears('Подтвердить', ctx => {
   return ctx.scene.leave()
 })
 let bot
-if (process.env.environment == 'production') {
+if (process.env.environment == 'development') {
+  // if environment is "development"
+  bot = new Telegraf(process.env.TEST_BOT_TOKEN)
+} else {
   // Else webhook
   // if environment is "Production"
   bot = new Telegraf(process.env.BOT_TOKEN)
   //bot.startWebhook(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/setWebhook?url=${process.env.APP_DOMAIN}&drop_pending_updates=true`, null, 3000,) // Setting webhook URL path
   //bot.startWebhook('/', null, 8443)
-} else {
-  // if environment is "development"
-  bot = new Telegraf(process.env.TEST_BOT_TOKEN)
 }
 
 // const bot = new Telegraf(process.env.BOT_TOKEN)
