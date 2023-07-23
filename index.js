@@ -29,15 +29,15 @@ gsStage.hears('Подтвердить', ctx => {
   return ctx.scene.leave()
 })
 let bot
-if (process.env.environment == 'development') {
-  // if environment is "development"
-  bot = new Telegraf(process.env.TEST_BOT_TOKEN)
-} else {
+if (process.env.environment == 'production') {
   // Else webhook
   // if environment is "Production"
   bot = new Telegraf(process.env.BOT_TOKEN)
   //bot.startWebhook(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/setWebhook?url=${process.env.APP_DOMAIN}&drop_pending_updates=true`, null, 3000,) // Setting webhook URL path
   //bot.startWebhook('/', null, 8443)
+} else {
+  // if environment is "development"
+  bot = new Telegraf(process.env.TEST_BOT_TOKEN)
 }
 
 // const bot = new Telegraf(process.env.BOT_TOKEN)
@@ -72,12 +72,7 @@ bot.command('grave_service', async ctx => {
   }
 })
 
-if (process.env.environment == 'development') {
-  // if local use Long-polling
-  bot.launch().then(() => {
-    console.info(`The bot ${bot.botInfo.username} is running locally`)
-  })
-} else {
+if (process.env.environment == 'production') {
   // Launch on webhook
   bot
     .launch({
@@ -89,6 +84,11 @@ if (process.env.environment == 'development') {
     .then(() => {
       console.info(`The bot ${bot.botInfo.username} is running on server`)
     })
+} else {
+  // if local use Long-polling
+  bot.launch().then(() => {
+    console.info(`The bot ${bot.botInfo.username} is running locally`)
+  })
 }
 process.once('SIGINT', () => app.stop('SIGINT'))
 process.once('SIGTERM', () => app.stop('SIGTERM'))
