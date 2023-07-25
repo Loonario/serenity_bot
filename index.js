@@ -1,35 +1,51 @@
 require('dotenv').config()
+if (process.env.NODE_ENV == 'development') {
+  require('dotenv').config({ path: '.env.dev' })
+}
 const {
   Telegraf,
   Markup,
   Scenes: { WizardScene, Stage },
   session,
 } = require('telegraf')
-const { message } = require('telegraf/filters')
-const gsWizard = require('./wizards/graveServiceWizard')
+const { leave } = Stage
+const Airtable = require('airtable')
+const gsWizard = require('./user/wizards/graveServiceWizard')
 const remove_kb = Markup.removeKeyboard()
 //const SceneGenerator = require('./Scenes')
 // const curScene = new SceneGenerator()
 // const nameScene = curScene.NameScene()
+Airtable.configure({
+  endpointUrl: 'https://api.airtable.com',
+  apiKey: process.env.AIRTABLE_API_KEY,
+})
+const base = new Airtable.base(process.env.AIRTABLE_BASE_ID)
+let currentUser = {}
 
+//Admin stage
+
+// User services stage
+const userStage = new Stage([gsWizard])
 gsWizard.enter(async ctx => {
-  await ctx.reply('Пожалуйста, укажите ФИО человека')
+  await ctx.reply('Будь-ласка, вкажіть ПІБ людини')
 })
 
-const gsStage = new Stage([gsWizard])
-gsStage.hears('Выйти', ctx => {
-  ctx.reply('Выберити услугу в Меню', remove_kb)
+userStage.hears('Вийти', async ctx => {
+  await ctx.reply('Оберіть послугу в Меню', remove_kb)
   return ctx.scene.leave()
 })
-gsStage.hears('Подтвердить', ctx => {
-  ctx.reply(
-    'Спасибо, Ваши данные приняты. Скоро мы вышлем фото для сверки',
+
+userStage.hears('Підтвердити', async ctx => {
+  await ctx.reply(
+    'Дякую, Ваші дані прийняті. Скоро ми надішлемо фото для звірки',
     remove_kb,
   )
   return ctx.scene.leave()
 })
+
+// Bot initialization
 let bot
-if (process.env.environment == 'development') {
+if (process.env.NODE_ENV == 'development') {
   // if environment is "development"
   bot = new Telegraf(process.env.TEST_BOT_TOKEN)
 } else {
@@ -39,32 +55,15 @@ if (process.env.environment == 'development') {
   //bot.startWebhook(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/setWebhook?url=${process.env.APP_DOMAIN}&drop_pending_updates=true`, null, 3000,) // Setting webhook URL path
   //bot.startWebhook('/', null, 8443)
 }
-
-// const bot = new Telegraf(process.env.BOT_TOKEN)
 //bot.use(Telegraf.log())
-bot.use(session(), gsStage.middleware())
+bot.use(session(), userStage.middleware())
 
-bot.telegram.setMyCommands([
-  { command: '/start', description: 'Начало общения' },
-  { command: '/grave_service', description: 'Услуга ухода за могилой (1 раз)' },
-])
-
-bot.start(async ctx => {
-  try {
-    await ctx.reply(
-      `Здравствуйте ${ctx.message.from.first_name}. Вас приветствует сервис Сиренити, мы помогаем сохранять безмятежность.`,
-      remove_kb,
-    )
-    await ctx.reply(`В Меню Вы можете выбрать желаемую услугу.`)
-  } catch (err) {
-    console.log(err)
-  }
-})
-
+//BOT commands
+//User's commands
 bot.command('grave_service', async ctx => {
   try {
     await ctx.reply(
-      'Вы выбрали услугу "Уход за могилой". Далее будет несколько вопросов, после чего мы пришлём фото для сверки. После подтверждения, мы поухаживаем за могилой, вышлем фото результата. Услуга стоит 39$.',
+      'Ви обрали послугу "Догляд за могилою". Далі буде дкілька питань, після чого ми надішлемо фото для попередньої звірки. Після підтверждення, ми доглянемо за могилою і надішлемо фото результату. Послуга коштує 39$.',
     )
     await ctx.scene.enter('graveServiceScene')
   } catch (err) {
@@ -72,7 +71,125 @@ bot.command('grave_service', async ctx => {
   }
 })
 
-if (process.env.environment == 'development') {
+// Admin's commands
+
+//Find or Create user in Airtable
+const findUser = async chatId => {
+  await base('Users')
+    .select({
+      filterByFormula: `{chat_id}=${chatId}`,
+      view: 'Grid view',
+    })
+    .firstPage(function (err, records) {
+      if (err) {
+        console.error(err)
+        return
+      }
+      if (records.length > 0) {
+        records.forEach(async function (record) {
+          //console.log('Retrieved', record.get('chat_id'))
+          currentUser.role = record.get('role')
+          currentUser.airtable_id = record.getId()
+          console.log(currentUser)
+          if (currentUser.role === 'User') {
+            bot.telegram.setMyCommands([
+              { command: '/start', description: 'На головну' },
+              {
+                command: '/grave_service',
+                description: 'Послуга догляду за могилою (1 раз)',
+              },
+            ])
+            await bot.telegram.sendMessage(
+              chatId,
+              `В Меню Ви можете обрати бажану послугу.`,
+            )
+          } else if (currentUser.role === ('Super_Admin' || 'Admin')) {
+            bot.telegram.setMyCommands([
+              { command: '/start', description: 'На головну' },
+              {
+                command: '/set_admin',
+                description: 'Призначити адміна',
+              },
+            ])
+            await bot.telegram.sendMessage(chatId, `Прівет Адмін`)
+          }
+          return record.getId()
+        })
+      } else {
+        base('Users').create(
+          [
+            {
+              fields: {
+                chat_id: chatId,
+                first_name: currentUser.first_name,
+                last_name: currentUser.last_name,
+                role: 'User',
+              },
+            },
+          ],
+          function (err, records) {
+            if (err) {
+              console.error(err)
+              return
+            }
+            records.forEach(async function (record) {
+              //console.log('Retrieved', record.get('chat_id'))
+              currentUser.role = record.get('role')
+              currentUser.airtable_id = record.getId()
+              console.log(currentUser)
+              if (currentUser.role === 'User') {
+                bot.telegram.setMyCommands([
+                  { command: '/start', description: 'На головну' },
+                  {
+                    command: '/grave_service',
+                    description: 'Послуга догляду за могилою (1 раз)',
+                  },
+                ])
+                await bot.telegram.sendMessage(
+                  chatId,
+                  `В Меню Ви можете обрати бажану послугу.`,
+                )
+              } else if (currentUser.role === ('Super_Admin' || 'Admin')) {
+                bot.telegram.setMyCommands([
+                  { command: '/start', description: 'На головну' },
+                  {
+                    command: '/set_admin',
+                    description: 'Призначити адміна',
+                  },
+                ])
+                await bot.telegram.sendMessage(chatId, `Привіт Адмін`)
+              }
+            })
+          },
+        )
+        return
+      }
+    })
+}
+
+// Bot start
+bot.start(async ctx => {
+  try {
+    await ctx.reply(
+      `Моє шанування, ${ctx.message.from.first_name}. Вас вітає сервіс Сиреніті, ми допомагаємо зберегти спокій та безтурботність.`,
+      remove_kb,
+    )
+    //console.log(ctx)
+    if (!currentUser.role) {
+      currentUser = Object.assign({}, ctx.from)
+      await findUser(ctx.chat.id)
+    } else if (currentUser.role === 'User') {
+      await ctx.reply(`В Меню Ви можете обрати бажану послугу.`)
+    } else if (currentUser.role === ('Super_Admin' || 'Admin')) {
+      await ctx.reply(`Привіт Адмін`)
+    }
+    console.log(ctx.chat.id)
+  } catch (err) {
+    console.log(err)
+  }
+})
+
+if (process.env.NODE_ENV == 'development') {
   // if local use Long-polling
   bot.launch().then(() => {
     console.info(`The bot ${bot.botInfo.username} is running locally`)
@@ -92,59 +209,3 @@ if (process.env.environment == 'development') {
 }
 process.once('SIGINT', () => app.stop('SIGINT'))
 process.once('SIGTERM', () => app.stop('SIGTERM'))
-
-// const graveServiceOptions = {
-//   reply_markup: JSON.stringify({
-//     inline_keyboard: [
-//       [
-//         { text: 'Отменить', callback_data: 'cancel' },
-//         { text: 'Подтвердить', callback_data: 'approved' },
-//       ],
-//     ],
-//     resize_keyboard: true,
-//   }),
-// }
-
-// Listen for any kind of message. There are different kinds of
-// messages.
-
-// const start = () => {
-//   bot.command
-
-//   bot.on('message', async msg => {
-//     const text = msg.text
-//     const chatId = msg.chat.id
-//     const firstName = msg.from.first_name
-//     if (text === '/start') {
-//       await bot.sendMessage(
-//         chatId,
-//         `Здравствуйте ${firstName}. Вас приветствует сервис Сиренити, мы помогаем сохранять безмятежность.`,
-//       )
-//       return bot.sendMessage(
-//         chatId,
-//         `Вы можете написать нам Фамилию Имя Отчество, года жизни, населенный пункт (либо конкретное кладбище), где человек похоронен.
-//       Далее мы пришлём фото для сверки.
-//       После подтверждения, мы поухаживаем за могилой, вышлем фото результата. Услуга стоит 39$.
-//       Также, можем выполнить любые Ваши дополнительные просьбы и пожелания.`,
-//       )
-//     }
-//     if (text === '/grave_service') {
-//       return bot.sendMessage(
-//         chatId,
-//         `Пожалуйста, укажите:
-//       ФИО
-//       Годы жизни
-//       Населенный пункт (и название кладбища)`,
-//       )
-//     } else {
-//       console.log(msg)
-//       bot.sendMessage(chatId, 'Я не смог понять Ваше сообщение')
-//     }
-//   })
-
-//   bot.on('callback_query', msg => {
-//     console.log(msg)
-//   })
-// }
-
-// start()

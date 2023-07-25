@@ -6,12 +6,12 @@ const {
   session,
 } = require('telegraf')
 
-const exit_kb = Markup.keyboard(['Выйти']).resize().oneTime()
+const exit_kb = Markup.keyboard(['Вийти']).resize().oneTime()
 const remove_kb = Markup.removeKeyboard()
-const exit_back_kb = Markup.keyboard([['Выйти', 'Назад']]).resize()
+const exit_back_kb = Markup.keyboard([['Вийти', 'Назад']]).resize()
 const exit_back_approve_kb = Markup.keyboard([
-  ['Выйти', 'Назад'],
-  ['Подтвердить'],
+  ['Вийти', 'Назад'],
+  ['Підтвердити'],
 ]).resize()
 
 // const kb = Markup.inlineKeyboard([
@@ -26,20 +26,20 @@ const nameHandler = Telegraf.on('text', async ctx => {
     const deadmanName = ctx.message.text
     const deadmanNameArr = deadmanName.split(' ')
     if (
-      deadmanName != 'Выйти' &&
+      deadmanName != 'Вийти' &&
       deadmanName &&
       deadmanNameArr.length >= 2 &&
       deadmanNameArr.length <= 3
     ) {
       ctx.scene.state.name = ctx.message.text
       await ctx.reply(
-        'Спасибо. Пожалуйста, укажите год рождения человека.',
+        'Дякую. Будь-ласка, вкажіть рік народження людини.',
         exit_back_kb,
       )
       return ctx.wizard.next()
     } else {
       ctx.reply(
-        'Пожалуйста, введите ФИО в формате "Фамилия Имя Отчество" или "Фамилия Имя" ',
+        'Будь-ласка, введіть ПІБ в форматі "Прізвище Імʼя По-батькові" або "Прізвище Імʼя" ',
       )
     }
   } catch (err) {
@@ -52,7 +52,7 @@ const yearOfBirthHandler = Telegraf.on('text', async ctx => {
     const deadmanYearOfBirth = Number(ctx.message.text)
     const currentYear = new Date().getFullYear()
     if (ctx.message.text === 'Назад') {
-      await ctx.reply('Пожалуйста, укажите ФИО человека', exit_kb)
+      await ctx.reply('Будь-ласка, вкажіть ПІБ людини', exit_kb)
       return ctx.wizard.back()
     }
     if (
@@ -62,13 +62,13 @@ const yearOfBirthHandler = Telegraf.on('text', async ctx => {
     ) {
       ctx.scene.state.yearOfBirth = deadmanYearOfBirth
       await ctx.reply(
-        'Спасибо. Пожалуйста, укажите год смерти человека.',
+        'Дякую. Будь-ласка, вкажіть рік смерті людинин.',
         exit_back_kb,
       )
       return ctx.wizard.next()
     } else {
       await ctx.reply(
-        'Пожалуйста, введите год в формате 1920. Год не может быть более текущего.',
+        'Будь-ласка, введіть рік в форматі 1920. Рік не може бути більше поточного.',
       )
     }
   } catch (err) {
@@ -82,7 +82,7 @@ const yearOfDeathHandler = Telegraf.on('text', async ctx => {
     const currentYear = new Date().getFullYear()
     if (ctx.message.text === 'Назад') {
       await ctx.reply(
-        'Пожалуйста, укажите год рождения человека.',
+        'Будь-ласка, вкадіть рік народження людини.',
         exit_back_kb,
       )
       return ctx.wizard.back()
@@ -95,13 +95,13 @@ const yearOfDeathHandler = Telegraf.on('text', async ctx => {
     ) {
       ctx.scene.state.yearOfDeath = deadmanYearOfDeath
       await ctx.reply(
-        'Спасибо. Пожалуйста, укажите область и населенный пункт, где размещено кладбище.',
+        'Дякую. Будь-ласка, вкажіть область та населений пункт, де знаходиться кладовище.',
         exit_back_kb,
       )
       return ctx.wizard.next()
     } else {
       await ctx.reply(
-        'Пожалуйста, введите год в формате 1950. Год не может быть более текущего и менее года рождения.',
+        'Будь-ласка, введіть рік в форматі 1920. Рік не може бути більше поточного і менше року народження.',
       )
     }
   } catch (err) {
@@ -112,18 +112,18 @@ const yearOfDeathHandler = Telegraf.on('text', async ctx => {
 const locationHandler = Telegraf.on('text', async ctx => {
   try {
     if (ctx.message.text === 'Назад') {
-      await ctx.reply('Пожалуйста, укажите год смерти человека.', exit_back_kb)
+      await ctx.reply('Будь-ласка, вкажіть рік смерті людинин.', exit_back_kb)
       return ctx.wizard.back()
     }
     if (ctx.message.text) {
       ctx.scene.state.location = ctx.message.text
       await ctx.reply(
-        'Спасибо. Пожалуйста, укажите номер участка, если Вам известен.',
+        'Дякую. Будь-ласка, вкажіть номер ділянки, якщо Вам відомо.',
         exit_back_kb,
       )
       return ctx.wizard.next()
     } else {
-      await ctx.reply('Пожалуйста, укажите номер участка, если Вам известен.')
+      await ctx.reply('Будь-ласка, вкажіть номер ділянки, якщо Вам відомо.')
     }
   } catch (err) {
     console.log(err)
@@ -139,20 +139,20 @@ const placeHandler = Telegraf.on('text', async ctx => {
     ctx.session.place = ctx.message.text
     if (ctx.message.text === 'Назад') {
       await ctx.reply(
-        'Пожалуйста, укажите область и населенный пункт, где размещено кладбище.',
+        'Будь-ласка, вкажіть область та населений пункт, де знаходиться кладовище.',
         exit_back_kb,
       )
       return ctx.wizard.back()
     }
     await ctx.replyWithHTML(
-      `Пожалуйста, проверьте внесенный данные.
-      <b>ФИО:</b>
+      `Будь-ласка, перевірте внесені дані.
+      <b>ПІБ:</b>
        ${ctx.session.name}
-       <b>Годы жизни:</b>
+       <b>Роки життя:</b>
        ${ctx.session.yearOfBirth} – ${ctx.session.yearOfDeath}
-       <b>Место захоронения:</b>
+       <b>Місце поховання:</b>
        ${ctx.session.location}
-       <b>Участок:</b>
+       <b>Ділянка:</b>
        ${ctx.session.place}
        `,
       exit_back_approve_kb,
@@ -167,7 +167,7 @@ const lastStep = Telegraf.on('text', async ctx => {
   try {
     if (ctx.message.text === 'Назад') {
       await ctx.reply(
-        'Пожалуйста, укажите номер участка, если Вам известен.',
+        'Будь-ласка, вкажіть номер ділянки, якщо Вам відомо.',
         exit_back_kb,
       )
       return ctx.wizard.back()
@@ -188,10 +188,9 @@ const graveServiceScene = new WizardScene(
 )
 graveServiceScene.enter(async ctx => {
   try {
-    await ctx.reply('Пожалуйста, укажите ФИО человека', exit_kb)
+    await ctx.reply('Будь-ласка вкажіть ПІБ людини', exit_kb)
   } catch (err) {
     console.log(err)
   }
 })
-
 module.exports = graveServiceScene
