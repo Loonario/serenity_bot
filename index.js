@@ -90,6 +90,7 @@ const findUser = async chatId => {
       view: 'Grid view',
     })
     .firstPage(function (err, records) {
+      console.log('Searchin user in Airtable')
       if (err) {
         console.error(err)
         return
@@ -103,7 +104,7 @@ const findUser = async chatId => {
           if (currentUser.role === 'User') {
             await bot.telegram.sendMessage(
               chatId,
-              `Обліковий знайдено. Дякую, що зачекали`,
+              `Обліковий запис знайдено. Дякую, що зачекали`,
             )
             bot.telegram.setMyCommands(userCommands)
             await bot.telegram.sendMessage(
@@ -133,6 +134,7 @@ const findUser = async chatId => {
               console.error(err)
               return
             }
+            console.log('Creating user in Airtable')
             records.forEach(async function (record) {
               //console.log('Retrieved', record.get('chat_id'))
               currentUser.role = record.get('role')
