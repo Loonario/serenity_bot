@@ -11,6 +11,8 @@ const {
 const { leave } = Stage
 const Airtable = require('airtable')
 const gsWizard = require('./user/wizards/graveServiceWizard')
+const { userCommands } = require('./user/variables')
+const { adminCommands } = require('./admin/variables')
 const remove_kb = Markup.removeKeyboard()
 //const SceneGenerator = require('./Scenes')
 // const curScene = new SceneGenerator()
@@ -58,23 +60,30 @@ if (process.env.NODE_ENV == 'development') {
 //bot.use(Telegraf.log())
 bot.use(session(), userStage.middleware())
 
-//BOT commands
+//BOT commands listeners
 //User's commands
-bot.command('grave_service', async ctx => {
-  try {
-    await ctx.reply(
-      'Ви обрали послугу "Догляд за могилою". Далі буде дкілька питань, після чого ми надішлемо фото для попередньої звірки. Після підтверждення, ми доглянемо за могилою і надішлемо фото результату. Послуга коштує 39$.',
-    )
-    await ctx.scene.enter('graveServiceScene')
-  } catch (err) {
-    console.log(err)
-  }
-})
+const userCommandsHandlers = () => {
+  bot.command('grave_service', async ctx => {
+    try {
+      await ctx.reply(
+        'Ви обрали послугу "Догляд за могилою". Далі буде дкілька питань, після чого ми надішлемо фото для попередньої звірки. Після підтверждення, ми доглянемо за могилою і надішлемо фото результату. Послуга коштує 39$.',
+      )
+      await ctx.scene.enter('graveServiceScene')
+    } catch (err) {
+      console.log(err)
+    }
+  })
+}
+userCommandsHandlers()
 
 // Admin's commands
 
 //Find or Create user in Airtable
 const findUser = async chatId => {
+  await bot.telegram.sendMessage(
+    chatId,
+    `Ми перевіряємо Ваш обліковий запис...`,
+  )
   await base('Users')
     .select({
       filterByFormula: `{chat_id}=${chatId}`,
@@ -92,26 +101,18 @@ const findUser = async chatId => {
           currentUser.airtable_id = record.getId()
           console.log(currentUser)
           if (currentUser.role === 'User') {
-            bot.telegram.setMyCommands([
-              { command: '/start', description: 'На головну' },
-              {
-                command: '/grave_service',
-                description: 'Послуга догляду за могилою (1 раз)',
-              },
-            ])
+            await bot.telegram.sendMessage(
+              chatId,
+              `Обліковий знайдено. Дякую, що зачекали`,
+            )
+            bot.telegram.setMyCommands(userCommands)
             await bot.telegram.sendMessage(
               chatId,
               `В Меню Ви можете обрати бажану послугу.`,
             )
           } else if (currentUser.role === ('Super_Admin' || 'Admin')) {
-            bot.telegram.setMyCommands([
-              { command: '/start', description: 'На головну' },
-              {
-                command: '/set_admin',
-                description: 'Призначити адміна',
-              },
-            ])
-            await bot.telegram.sendMessage(chatId, `Прівет Адмін`)
+            bot.telegram.setMyCommands(adminCommands)
+            await bot.telegram.sendMessage(chatId, `Привіт Адмін`)
           }
           return record.getId()
         })
@@ -138,25 +139,13 @@ const findUser = async chatId => {
               currentUser.airtable_id = record.getId()
               console.log(currentUser)
               if (currentUser.role === 'User') {
-                bot.telegram.setMyCommands([
-                  { command: '/start', description: 'На головну' },
-                  {
-                    command: '/grave_service',
-                    description: 'Послуга догляду за могилою (1 раз)',
-                  },
-                ])
+                bot.telegram.setMyCommands(userCommands)
                 await bot.telegram.sendMessage(
                   chatId,
-                  `В Меню Ви можете обрати бажану послугу.`,
+                  `Ваш обліковий запис створено.`,
                 )
               } else if (currentUser.role === ('Super_Admin' || 'Admin')) {
-                bot.telegram.setMyCommands([
-                  { command: '/start', description: 'На головну' },
-                  {
-                    command: '/set_admin',
-                    description: 'Призначити адміна',
-                  },
-                ])
+                bot.telegram.setMyCommands(adminCommands)
                 await bot.telegram.sendMessage(chatId, `Привіт Адмін`)
               }
             })
@@ -168,26 +157,29 @@ const findUser = async chatId => {
 }
 
 // Bot start
-bot.start(async ctx => {
-  try {
-    await ctx.reply(
-      `Моє шанування, ${ctx.message.from.first_name}. Вас вітає сервіс Сиреніті, ми допомагаємо зберегти спокій та безтурботність.`,
-      remove_kb,
-    )
-    //console.log(ctx)
-    if (!currentUser.role) {
-      currentUser = Object.assign({}, ctx.from)
-      await findUser(ctx.chat.id)
-    } else if (currentUser.role === 'User') {
-      await ctx.reply(`В Меню Ви можете обрати бажану послугу.`)
-    } else if (currentUser.role === ('Super_Admin' || 'Admin')) {
-      await ctx.reply(`Привіт Адмін`)
+const start = () => {
+  bot.start(async ctx => {
+    try {
+      await ctx.reply(
+        `Моє шанування, ${ctx.message.from.first_name}. Вас вітає сервіс Сиреніті, ми допомагаємо зберегти спокій та безтурботність.`,
+        remove_kb,
+      )
+      //console.log(ctx)
+      if (!currentUser.role) {
+        currentUser = Object.assign({}, ctx.from)
+        await findUser(ctx.chat.id)
+      } else if (currentUser.role === 'User') {
+        await ctx.reply(`В Меню Ви можете обрати бажану послугу.`)
+      } else if (currentUser.role === ('Super_Admin' || 'Admin')) {
+        await ctx.reply(`Привіт Адмін`)
+      }
+      console.log(ctx.chat.id)
+    } catch (err) {
+      console.log(err)
     }
-    console.log(ctx.chat.id)
-  } catch (err) {
-    console.log(err)
-  }
-})
+  })
+}
+start()
 
 if (process.env.NODE_ENV == 'development') {
   // if local use Long-polling
