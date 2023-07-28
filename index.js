@@ -1,3 +1,4 @@
+// const express = require('express')
 require('dotenv').config()
 if (process.env.NODE_ENV == 'development') {
   require('dotenv').config({ path: '.env.dev' })
@@ -17,11 +18,14 @@ const remove_kb = Markup.removeKeyboard()
 //const SceneGenerator = require('./Scenes')
 // const curScene = new SceneGenerator()
 // const nameScene = curScene.NameScene()
-Airtable.configure({
-  endpointUrl: 'https://api.airtable.com',
-  apiKey: process.env.AIRTABLE_API_KEY,
-})
-const base = new Airtable.base(process.env.AIRTABLE_BASE_ID)
+// const app = express()
+// Airtable.configure({
+//   endpointUrl: 'https://api.airtable.com',
+//   apiKey: process.env.AIRTABLE_API_KEY,
+// })
+const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
+  process.env.AIRTABLE_BASE_ID,
+)
 let currentUser = {}
 
 //Admin stage
@@ -194,7 +198,7 @@ if (process.env.NODE_ENV == 'development') {
     .launch({
       webhook: {
         domain: process.env.APP_DOMAIN, // Your domain URL (where server code will be deployed)
-        port: process.env.PORT,
+        port: process.env.PORT || 3000,
       },
     })
     .then(() => {
