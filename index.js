@@ -88,7 +88,7 @@ const findUser = async chatId => {
     chatId,
     `Ми перевіряємо Ваш обліковий запис...`,
   )
-  await base('Users')
+  base('Users')
     .select({
       filterByFormula: `{chat_id}=${chatId}`,
       view: 'Grid view',
