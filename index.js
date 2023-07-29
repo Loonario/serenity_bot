@@ -26,6 +26,7 @@ const remove_kb = Markup.removeKeyboard()
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
   process.env.AIRTABLE_BASE_ID,
 )
+const tableUsers = process.env.AIRTABLE_USERS_TABLE_ID
 let currentUser = {}
 
 //Admin stage
@@ -88,10 +89,11 @@ const findUser = async chatId => {
     chatId,
     `Ми перевіряємо Ваш обліковий запис...`,
   )
-  base('Users')
+  base(tableUsers)
     .select({
       filterByFormula: `{chat_id}=${chatId}`,
       view: 'Grid view',
+      maxRecords: 1,
     })
     .firstPage(function (err, records) {
       console.log('Searching user in Airtable')
@@ -123,7 +125,7 @@ const findUser = async chatId => {
           return record.getId()
         })
       } else {
-        base('Users').create(
+        base(tableUsers).create(
           [
             {
               fields: {
