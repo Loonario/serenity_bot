@@ -94,7 +94,7 @@ const findUser = async chatId => {
       view: 'Grid view',
     })
     .firstPage(function (err, records) {
-      console.log('Searchin user in Airtable')
+      console.log('Searching user in Airtable')
       if (err) {
         console.error(err)
         return
@@ -110,15 +110,16 @@ const findUser = async chatId => {
               chatId,
               `Обліковий запис знайдено. Дякую, що зачекали`,
             )
-            bot.telegram.setMyCommands(userCommands)
+            await bot.telegram.setMyCommands(userCommands)
             await bot.telegram.sendMessage(
               chatId,
               `В Меню Ви можете обрати бажану послугу.`,
             )
           } else if (currentUser.role === ('Super_Admin' || 'Admin')) {
-            bot.telegram.setMyCommands(adminCommands)
+            await bot.telegram.setMyCommands(adminCommands)
             await bot.telegram.sendMessage(chatId, `Привіт Адмін`)
           }
+          console.log(record.getId())
           return record.getId()
         })
       } else {
@@ -145,13 +146,13 @@ const findUser = async chatId => {
               currentUser.airtable_id = record.getId()
               console.log(currentUser)
               if (currentUser.role === 'User') {
-                bot.telegram.setMyCommands(userCommands)
+                await bot.telegram.setMyCommands(userCommands)
                 await bot.telegram.sendMessage(
                   chatId,
                   `Ваш обліковий запис створено.`,
                 )
               } else if (currentUser.role === ('Super_Admin' || 'Admin')) {
-                bot.telegram.setMyCommands(adminCommands)
+                await bot.telegram.setMyCommands(adminCommands)
                 await bot.telegram.sendMessage(chatId, `Привіт Адмін`)
               }
             })
