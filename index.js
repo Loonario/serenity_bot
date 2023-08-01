@@ -12,9 +12,11 @@ const {
 const { leave } = Stage
 const Airtable = require('airtable')
 const gsWizard = require('./user/wizards/graveServiceWizard')
+const setAdminWizard = require('./admin/wizards/setAdmin')
 const { userCommands } = require('./user/variables')
 const { adminCommands } = require('./admin/variables')
 const remove_kb = Markup.removeKeyboard()
+const superAdmin = process.env.SUPERADMIN_CHATID
 //const SceneGenerator = require('./Scenes')
 // const curScene = new SceneGenerator()
 // const nameScene = curScene.NameScene()
@@ -30,6 +32,15 @@ const tableUsers = process.env.AIRTABLE_USERS_TABLE_ID
 let currentUser = {}
 
 //Admin stage
+const adminStage = new Stage([setAdminWizard])
+setAdminWizard.enter(async ctx => {
+  await ctx.reply('ID?')
+})
+
+adminStage.hears('Вийти', async ctx => {
+  await ctx.reply('Оберіть послугу в Меню', remove_kb)
+  return ctx.scene.leave()
+})
 
 // User services stage
 const userStage = new Stage([gsWizard])
@@ -63,7 +74,7 @@ if (process.env.NODE_ENV == 'development') {
   //bot.startWebhook('/', null, 8443)
 }
 //bot.use(Telegraf.log())
-bot.use(session(), userStage.middleware())
+bot.use(session(), userStage.middleware(), adminStage.middleware())
 
 //BOT commands listeners
 //User's commands
@@ -75,13 +86,71 @@ const userCommandsHandlers = () => {
       )
       await ctx.scene.enter('graveServiceScene')
     } catch (err) {
-      console.log(err)
+      console.error(err)
     }
   })
 }
 userCommandsHandlers()
 
 // Admin's commands
+const adminCommandsHandlers = () => {
+  bot.command('set_admin', async ctx => {
+    try {
+      await ctx.reply('Щоб призначити адміна, вкажіть ID його чата')
+      await ctx.scene.enter('setAdminScene')
+    } catch (err) {
+      console.error(err)
+    }
+  })
+}
+bot.action('cancel_admin_invite', async ctx => {
+  try {
+    await ctx.answerCbQuery()
+    console.log('Admin invite Canceled')
+    await ctx.reply(`Ви відхилили запрошення стати Адміном`)
+    await bot.telegram.sendMessage(
+      superAdmin,
+      `Користувач ${ctx.from.first_name}, відхилив запрошення стати адміном`,
+    )
+  } catch (err) {
+    await ctx.answerCbQuery()
+    console.error(err)
+  }
+})
+bot.action('accept_admin_invite', async ctx => {
+  try {
+    await ctx.answerCbQuery()
+    console.log('Admin invite Accepted')
+    base(tableUsers).update(
+      [
+        {
+          id: currentUser.airtable_id,
+          fields: {
+            role: 'Admin',
+          },
+        },
+      ],
+      async function (err, records) {
+        if (err) {
+          console.error(err)
+          return
+        }
+        if (records.length > 0) {
+          currentUser.role = records[0].get('role')
+          await bot.telegram.setMyCommands(adminCommands)
+          await ctx.reply(`Привіт Адмін`)
+          await bot.telegram.sendMessage(
+            superAdmin,
+            `Користувач ${ctx.from.first_name} - новий адмін бота`,
+          )
+        }
+      },
+    )
+  } catch (err) {
+    console.error(err)
+  }
+})
+adminCommandsHandlers()
 
 //Find or Create user in Airtable
 const findUser = async chatId => {
